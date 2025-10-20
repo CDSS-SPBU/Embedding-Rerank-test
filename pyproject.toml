@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "rag-llm"
+version = "0.1.0"
+description = ""
+authors = ["OchirLG <lidzhigoryaev.ochir47@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.12,<3.14"
+langchain = "^0.3.27"
+chromadb = "^1.1.0"
+langchain-community = "^0.3.30"
+sentence-transformers = "^5.1.1"
+torch = "^2.8.0"
+transformers = "^4.56.2"
+accelerate = "^1.10.1"
+langchain-huggingface = "^0.3.1"
+python-multipart = "^0.0.20"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
