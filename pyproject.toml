@@ -16,6 +16,9 @@ transformers = "^4.56.2"
 accelerate = "^1.10.1"
 langchain-huggingface = "^0.3.1"
 python-multipart = "^0.0.20"
+einops = "^0.8.1"
+fastapi = "^0.121.0"
+psycopg2-binary = "^2.9.11"
 
 
 [build-system]

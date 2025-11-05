@@ -1,0 +1,47 @@
+services:
+  postgres:
+    container_name: vector_pg
+    image: ankane/pgvector:latest
+    environment:
+      POSTGRES_DB: rag
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rag"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432" # чтобы на хосте не конфликтовал
+    command: 
+      - "postgres"
+      - "-c"
+      - "listen_addresses=*"
+
+  embedding-service:
+    container_name: embedding_api
+    build: ./embedding-service
+    ports:
+      - "8000:8000"
+    environment:
+      PG_HOST: postgres       
+      PG_PORT: 5432
+      PG_DB: rag
+      PG_USER: embedd_user
+      PG_PASSWORD: embedd_password
+      LOG_LEVEL: INFO
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
