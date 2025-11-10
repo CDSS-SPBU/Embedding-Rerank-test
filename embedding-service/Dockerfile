@@ -32,7 +32,7 @@ COPY --from=builder /usr/local /usr/local
 COPY --from=builder /root/.cache/huggingface /root/.cache/huggingface
 
 # Копируем код
-COPY embed.py pydantic_models.py app.py ./
+COPY embed.py pydantic_models.py app.py config.py ./
 
 ENV HF_HOME=/root/.cache/huggingface
 ENV LOG_LEVEL=INFO

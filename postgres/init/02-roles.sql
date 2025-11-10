@@ -15,5 +15,14 @@ BEGIN
 END
 $$;
 
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'rerank_user') THEN
+    CREATE USER dev WITH PASSWORD 'rerank_password';
+  END IF;
+END
+$$;
+
 ALTER USER embedd_user WITH SUPERUSER; -- изменить на нужные права потом
 ALTER USER dev WITH SUPERUSER;
+ALTER USER rerank_user WITH SUPERUSER;

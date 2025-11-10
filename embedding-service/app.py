@@ -2,15 +2,17 @@ import logging
 import os
 from fastapi import FastAPI, HTTPException
 from embed import JinaEmbedder
-from pydantic_models import EmbedRequest
+from pydantic_models import EmbedRequest, EmbedResponsePassage, EmbedResponseQuery
 import json
 import asyncpg
 from contextlib import asynccontextmanager
+from config import Config
 
+conf = Config()
 
 # Логгирование
 logging.basicConfig(
-    level=getattr(logging, os.getenv("LOG_LEVEL", "INFO")),
+    level=getattr(logging, conf.LOG_LEVEL),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger("embedding-service")
@@ -37,13 +39,13 @@ async def lifespan(app: FastAPI):
     # Инициализация БД
     try:
         db_pool = await asyncpg.create_pool(
-            host=os.getenv("PG_HOST", "postgres"),
-            port=int(os.getenv("PG_PORT", 5432)),
-            database=os.getenv("PG_DB", "rag"),
-            user=os.getenv("PG_USER", "embedd_user"),
-            password=os.getenv("PG_PASSWORD", "embedd_password"),
-            min_size=1,
-            max_size=10
+            host=conf.DB_HOST,
+            port=int(conf.DB_PORT),
+            database=conf.DB_NAME,
+            user=conf.DB_USER,
+            password=conf.DB_PASSWORD,
+            min_size=conf.DB_POOL_MIN_SIZE,
+            max_size=conf.DB_POOL_MAX_SIZE
         )
         logger.info("Пул БД инициализирован")
     except Exception as e:
@@ -74,16 +76,10 @@ async def health_check():
         "db_connected": db_pool is not None
     }
 
-@app.post("/embed")
-async def embed_chunks(req: EmbedRequest):
+@app.post("/embed", summary="Генерация эмбеддингов")
+async def embed_chunks(req: EmbedRequest) -> EmbedResponsePassage | EmbedResponseQuery:
     if not embedder:
         raise HTTPException(status_code=503, detail="Модель не загружена")
-    
-    if len(req.texts) == 0:
-        raise HTTPException(status_code=400, detail="texts пустой")
-    
-    if len(req.texts) > 100:
-        raise HTTPException(status_code=400, detail="Слишком большой батч. Максимум 100 текстов")
 
     try:
         logger.info(f"Обработка батча из {len(req.texts)} текстов")
@@ -98,6 +94,14 @@ async def embed_chunks(req: EmbedRequest):
         logger.exception("Ошибка при генерации эмбеддингов")
         raise HTTPException(status_code=500, detail=str(e))
     
+    if req.task == "retrieval.query":
+        return EmbedResponseQuery(
+            embedding=embeddings.tolist(),
+            count=len(embeddings),
+            batch_size=len(req.texts),
+            embedding_dimensions=embeddings.shape[1]
+        )
+
     try:
         # Подготовка данных для БД
         meta_list = req.metadata or [{} for _ in req.texts]
@@ -109,6 +113,7 @@ async def embed_chunks(req: EmbedRequest):
             '[' + ','.join(map(str, emb.tolist())) + ']' 
             for emb in embeddings
         ]
+
 
         async with db_pool.acquire() as connection:
             query = """

@@ -6,9 +6,13 @@ import numpy as np
 import os
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from fastapi import HTTPException
+from config import Config
+
+conf = Config()
 
 logging.basicConfig(
-    level=getattr(logging, os.getenv("LOG_LEVEL", "INFO")),
+    level=getattr(logging, conf.LOG_LEVEL),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
@@ -18,7 +22,7 @@ class JinaEmbedder:
     """Генерация эмбеддингов через модель jina-embeddings-v3"""
 
     def __init__(self, model_name="jinaai/jina-embeddings-v3", max_workers=3):
-        logger.info("🔍 Загрузка модели %s", model_name)
+        logger.info("Загрузка модели %s", model_name)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         logger.info("Используется устройство: %s", self.device)
 
@@ -112,8 +116,15 @@ class JinaEmbedder:
         """Асинхронная версия encode"""
         loop = asyncio.get_event_loop()
         
-        # Запускаем в thread pool чтобы не блокировать event loop
-        return await loop.run_in_executor(
-            self.thread_pool, 
-            lambda: self.encode(texts, task, max_length, dimensions)
+        try:
+        # Добавляем timeout чтобы не вешать сервис
+            return await asyncio.wait_for(
+                loop.run_in_executor(
+                    self.thread_pool, 
+                    lambda: self.encode(texts, task, max_length, dimensions)
+                ),
+                timeout=conf.EMBED_TIMEOUT
         )
+        except asyncio.TimeoutError:
+            logger.error("Timeout при генерации эмбеддингов для %d текстов", len(texts))
+            raise HTTPException(status_code=504, detail="Timeout при генерации эмбеддингов")
