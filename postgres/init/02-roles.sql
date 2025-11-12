@@ -18,7 +18,7 @@ $$;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'rerank_user') THEN
-    CREATE USER dev WITH PASSWORD 'rerank_password';
+    CREATE USER rerank_user WITH PASSWORD 'rerank_password';
   END IF;
 END
 $$;
