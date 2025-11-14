@@ -24,8 +24,8 @@ services:
 
   embedding-service:
     container_name: embedding_api
-    build: ./embedding-service:latest
-    image: rag_llm-embedding-service
+    build: ./embedding-service
+    image: rag_llm-embedding-service:latest
     ports:
       - "8000:8000"
     environment:
@@ -47,7 +47,7 @@ services:
   rerank-service:
     container_name: rerank_api
     build: ./rerank-service
-    image: rag_llm-rerank-service
+    image: rag_llm-rerank-service:latest
     ports:
       - "8001:8001" 
     environment:
